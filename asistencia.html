@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f19">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Asistencia">
+  <meta name="description" content="Control diario de asistencia, jornadas laborales y ranking mensual de trabajadores">
+  
+  <title>Control de Asistencia y Jornadas</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <style>
+/* Estilos Móviles Profesionales: Control de Jornadas Laborales */
+:root {
+  --bg-primary: #0b0f19;
+  --bg-card: #151d30;
+  --bg-card-hover: #1e2942;
+  --bg-elevated: #212c45;
+  --border-color: #2a3756;
+  --border-focus: #3b82f6;
+
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  --success: #10b981;
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --success-border: rgba(16, 185, 129, 0.4);
+
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --warning: #f59e0b;
+  --primary: #0ea5e9;
+
+  --gold: #fbbf24;
+  --silver: #cbd5e1;
+  --bronze: #d97706;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.25);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.35);
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  padding-top: var(--safe-top);
+  padding-bottom: calc(75px + var(--safe-bottom));
+}
+
+/* Encabezado */
+.app-header {
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid var(--border-color);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon {
+  font-size: 1.5rem;
+}
+
+.brand-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+/* Barra inferior estilo App Móvil */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(65px + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 900;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.nav-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 4px 0;
+  gap: 3px;
+}
+
+.nav-tab .tab-icon {
+  font-size: 1.35rem;
+  transition: transform 0.2s;
+}
+
+.nav-tab .tab-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.nav-tab.active {
+  color: var(--success);
+}
+
+.nav-tab.active .tab-icon {
+  transform: translateY(-2px);
+}
+
+/* Contenedor principal */
+.main-container {
+  flex: 1;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 14px;
+}
+
+.tab-pane {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.tab-pane.active {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Banner de instalación PWA */
+.install-banner {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: white;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.install-banner-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+}
+
+.install-banner-text strong {
+  font-size: 0.95rem;
+}
+
+.install-banner button {
+  background: #fff;
+  color: #0369a1;
+  border: none;
+  font-weight: 800;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+
+/* Barra de selección de fecha */
+.date-selector-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.date-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.date-nav-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.date-nav-btn:active {
+  transform: scale(0.95);
+  background: var(--border-color);
+}
+
+.current-date-input {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  outline: none;
+}
+
+.current-date-input:focus {
+  border-color: var(--success);
+}
+
+.date-display-label {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: capitalize;
+}
+
+/* Resumen del día y botones rápidos */
+.day-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.attendees-counter-badge {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.attendees-counter-badge strong {
+  color: var(--success);
+}
+
+.quick-check-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.quick-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.quick-btn:active {
+  background: var(--bg-elevated);
+}
+
+/* Tarjetas de Asistencia por Trabajador */
+.attendance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.worker-attendance-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.worker-attendance-card:active {
+  transform: scale(0.98);
+}
+
+/* Estado: TRABAJÓ (Verde) */
+.worker-attendance-card.present {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(6, 78, 59, 0.25));
+  border-color: var(--success);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.2);
+}
+
+.worker-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.worker-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  flex-shrink: 0;
+}
+
+.worker-attendance-card.present .worker-avatar {
+  background: var(--success);
+  border-color: var(--success);
+  color: #0b0f19;
+}
+
+.worker-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.worker-name-text {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.btn-rename {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.btn-rename:hover {
+  color: var(--primary);
+}
+
+/* Interruptor / Botón de estado */
+.status-pill {
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-elevated);
+  color: var(--text-dim);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.worker-attendance-card.present .status-pill {
+  background: var(--success);
+  color: #0b0f19;
+  border-color: var(--success);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+/* ==========================================================
+   ESTILOS DE ESTADÍSTICAS Y FIN DE MES
+   ========================================================== */
+.stats-header-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.month-picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.month-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  text-align: center;
+}
+
+.month-days-count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* Tarjetas destacadas: Más y Menos */
+.highlights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.highlight-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.highlight-card.top {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(217, 119, 6, 0.05));
+}
+
+.highlight-card.bottom {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.08), rgba(185, 28, 28, 0.05));
+}
+
+.highlight-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.highlight-card.top .highlight-label { color: var(--gold); }
+.highlight-card.bottom .highlight-label { color: #f87171; }
+
+.highlight-name {
+  font-size: 1rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.highlight-days {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: var(--text-main);
+}
+
+/* Lista oficial de fin de mes */
+.monthly-ranking-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-md);
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ranking-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ranking-item:active {
+  background: var(--bg-card-hover);
+}
+
+.ranking-item-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rank-badge {
+  font-weight: 800;
+  font-size: 0.9rem;
+  width: 28px;
+}
+
+.rank-1 { color: var(--gold); font-size: 1.1rem; }
+.rank-2 { color: var(--silver); font-size: 1.05rem; }
+.rank-3 { color: var(--bronze); font-size: 1rem; }
+
+.ranking-worker-name {
+  flex: 1;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-left: 6px;
+}
+
+.ranking-days-count {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--success);
+}
+
+.ranking-days-count span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 3px;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--success);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+/* Botón para compartir lista en WhatsApp */
+.share-whatsapp-btn {
+  background: linear-gradient(135deg, #15803d, #047857);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.3);
+  margin-top: 14px;
+}
+
+.share-whatsapp-btn:active {
+  transform: scale(0.97);
+}
+
+/* ==========================================================
+   ESTILOS DE PESTAÑA: GESTIÓN DE TRABAJADORES
+   ========================================================== */
+.manage-workers-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.add-worker-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.form-input {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: var(--success);
+}
+
+.btn-add-action {
+  background: var(--success);
+  color: #0b0f19;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px 18px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-add-action:active {
+  transform: scale(0.96);
+}
+
+.workers-directory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.worker-directory-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.worker-dir-name {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.worker-dir-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn-action {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.icon-btn-action:active {
+  transform: scale(0.92);
+}
+
+.icon-btn-action.delete {
+  color: var(--danger);
+}
+
+/* Modales */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s;
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  max-width: 440px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 18px;
+  box-shadow: var(--shadow-md);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.worked-dates-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.date-chip {
+  background: var(--bg-elevated);
+  border: 1px solid var(--success-border);
+  color: var(--success);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+/* Toast de notificación */
+.toast-msg {
+  position: fixed;
+  bottom: 85px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #10b981;
+  color: #0b0f19;
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s ease;
+  z-index: 1200;
+}
+
+.toast-msg.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+</style>
+</head>
+<body>
+
+  <!-- Encabezado Fijo -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">📋</span>
+      <span class="brand-title" id="brand-title">Control de Asistencia</span>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="main-container">
+    
+    <!-- Banner de Instalación PWA (oculto por defecto) -->
+    <div id="pwa-install-banner" class="install-banner" style="display: none;">
+      <div class="install-banner-text">
+        <strong>Instalar Aplicación</strong>
+        <span>Úsala sin conexión en tu móvil</span>
+      </div>
+      <button type="button" id="btn-pwa-install">Instalar</button>
+    </div>
+
+    <!-- PESTAÑA 1: ASISTENCIA DIARIA -->
+    <section id="pane-attendance" class="tab-pane active">
+      <!-- Selector de Fecha -->
+      <div class="date-selector-card">
+        <div class="date-nav-row">
+          <button type="button" class="date-nav-btn" id="btn-prev-day">◀ Anterior</button>
+          <input type="date" id="selected-date-input" class="current-date-input">
+          <button type="button" class="date-nav-btn" id="btn-next-day">Siguiente ▶</button>
+        </div>
+        <div style="display: flex; justify-content: center; margin-top: 8px;">
+          <button type="button" class="quick-btn" id="btn-today" style="font-size: 0.8rem; padding: 4px 14px;">Hoy</button>
+        </div>
+        <div class="date-display-label" id="date-display-label">Cargando fecha...</div>
+      </div>
+
+      <!-- Barra de resumen y botones rápidos -->
+      <div class="day-actions-row">
+        <div class="attendees-counter-badge">
+          Trabajaron: <strong id="attendees-counter">0 de 0</strong>
+        </div>
+        <div class="quick-check-btns">
+          <button type="button" class="quick-btn" id="btn-check-all" title="Marcar a todos">✅ Todos</button>
+          <button type="button" class="quick-btn" id="btn-uncheck-all" title="Desmarcar todos">⚪ Ninguno</button>
+        </div>
+      </div>
+
+      <!-- Lista de trabajadores para marcar -->
+      <div id="attendance-list-container" class="attendance-list">
+        <!-- Renderizado dinámico desde app.js -->
+      </div>
+    </section>
+
+    <!-- PESTAÑA 2: LISTA ORDENADA Y FIN DE MES -->
+    <section id="pane-ranking" class="tab-pane">
+      <!-- Selector de Mes -->
+      <div class="stats-header-card">
+        <div class="month-picker-row">
+          <button type="button" class="date-nav-btn" id="btn-prev-month">◀</button>
+          <div>
+            <div class="month-title" id="stats-month-title">-</div>
+            <div class="month-days-count" id="stats-month-days">Total de días con trabajo: 0</div>
+          </div>
+          <button type="button" class="date-nav-btn" id="btn-next-month">▶</button>
+        </div>
+      </div>
+
+      <!-- Destacados: Quién trabajó más y quién menos -->
+      <div class="highlights-grid">
+        <div class="highlight-card top">
+          <span class="highlight-label">🏆 Más Trabajó</span>
+          <span class="highlight-name" id="highlight-top-name">-</span>
+          <span class="highlight-days" id="highlight-top-days">0 días</span>
+        </div>
+        <div class="highlight-card bottom">
+          <span class="highlight-label">💤 Menos Trabajó</span>
+          <span class="highlight-name" id="highlight-bottom-name">-</span>
+          <span class="highlight-days" id="highlight-bottom-days">0 días</span>
+        </div>
+      </div>
+
+      <!-- Lista Oficial Ordenada de Mayor a Menor -->
+      <div class="monthly-ranking-card">
+        <div class="section-header-row">
+          <div class="section-title">
+            <span>📊</span>
+            <span>Clasificación del Mes</span>
+          </div>
+          <span style="font-size: 0.75rem; color: var(--text-dim);">(De más a menos)</span>
+        </div>
+
+        <div id="monthly-ranking-container" class="ranking-list">
+          <!-- Renderizado dinámico -->
+        </div>
+
+        <!-- Botón para compartir lista en WhatsApp -->
+        <button type="button" id="btn-share-whatsapp" class="share-whatsapp-btn">
+          <span>📲</span>
+          <span>Compartir Lista Oficial por WhatsApp</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 3: GESTIÓN DE PERSONAS -->
+    <section id="pane-workers" class="tab-pane">
+      <div class="manage-workers-card">
+        <div class="section-title" style="margin-bottom: 12px;">
+          <span>👥</span>
+          <span>Añadir o Editar Personas</span>
+        </div>
+        
+        <form id="add-worker-form" class="add-worker-form">
+          <input type="text" id="new-worker-name-input" class="form-input" placeholder="Nombre de la persona..." required autocomplete="off">
+          <button type="submit" class="btn-add-action">+ Añadir</button>
+        </form>
+
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 14px;">
+          💡 Puedes tocar el icono de lápiz (✏️) en cualquier momento para cambiar un nombre sin perder sus días trabajados.
+        </p>
+
+        <div class="section-title" style="font-size: 0.95rem; margin-bottom: 10px; color: var(--text-muted);">
+          Personas Registradas
+        </div>
+
+        <div id="workers-directory-container" class="workers-directory-list">
+          <!-- Renderizado dinámico -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal Detalle de Días Trabajados por Persona -->
+  <div id="modal-worker-dates" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-worker-name">Días trabajados</div>
+        <button type="button" id="btn-close-worker-modal" class="quick-btn" style="padding: 4px 8px;">✕</button>
+      </div>
+      <p style="font-size: 0.8rem; color: var(--text-muted);">Días en los que se registró asistencia en este mes:</p>
+      <div id="worker-dates-chips" class="worked-dates-chips">
+        <!-- Chips de fechas -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Flotante -->
+  <div id="toast-msg" class="toast-msg">Mensaje copiado</div>
+
+  <!-- Barra de Navegación Inferior -->
+  <nav class="bottom-nav">
+    <button type="button" class="nav-tab active" data-tab="attendance">
+      <span class="tab-icon">📅</span>
+      <span class="tab-label">Asistencia</span>
+    </button>
+    <button type="button" class="nav-tab" data-tab="ranking">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">Fin de Mes</span>
+    </button>
+    <button type="button" class="nav-tab" data-tab="workers">
+      <span class="tab-icon">👥</span>
+      <span class="tab-label">Personas</span>
+    </button>
+  </nav>
+
+  <!-- Scripts -->
+  
+  <script>
+// Motor de Control de Asistencia y Estadísticas Mensuales
+
+// Almacenamiento seguro compatible con iOS Safari y modo local
+const safeStorage = {
+  _mem: {},
+  getItem(key) {
+    try {
+      if (typeof window !== 'undefined' && 'localStorage' in window && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+    } catch (e) {}
+    return this._mem[key] || null;
+  },
+  setItem(key, val) {
+    try {
+      if (typeof window !== 'undefined' && 'localStorage' in window && window.localStorage) {
+        window.localStorage.setItem(key, val);
+        return;
+      }
+    } catch (e) {}
+    this._mem[key] = String(val);
+  }
+};
+if (typeof window !== 'undefined') window.safeStorage = safeStorage;
+
+class AttendanceManager {
+  constructor() {
+    this.storageKey = 'control_asistencia_data_v1';
+    
+    // Lista de trabajadores
+    this.workers = [
+      { id: 1, name: 'Juan', active: true },
+      { id: 2, name: 'Carlos', active: true },
+      { id: 3, name: 'Antonio', active: true },
+      { id: 4, name: 'Pedro', active: true }
+    ];
+
+    // Registros por fecha: { "YYYY-MM-DD": [workerId1, workerId2, ...] }
+    this.records = {};
+
+    this.load();
+  }
+
+  save() {
+    try {
+      safeStorage.setItem(this.storageKey, JSON.stringify({
+        workers: this.workers,
+        records: this.records
+      }));
+    } catch (e) {
+      console.warn('Error al guardar datos de asistencia', e);
+    }
+  }
+
+  load() {
+    try {
+      const data = safeStorage.getItem(this.storageKey);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (parsed.workers && Array.isArray(parsed.workers)) {
+          this.workers = parsed.workers;
+        }
+        if (parsed.records && typeof parsed.records === 'object') {
+          this.records = parsed.records;
+        }
+      }
+    } catch (e) {
+      console.warn('Error al cargar datos de asistencia', e);
+    }
+  }
+
+  // --- GESTIÓN DE TRABAJADORES ---
+
+  addWorker(name) {
+    const trimmed = name ? name.trim() : '';
+    if (!trimmed) return null;
+    const newWorker = {
+      id: Date.now(),
+      name: trimmed,
+      active: true
+    };
+    this.workers.push(newWorker);
+    this.save();
+    return newWorker;
+  }
+
+  editWorker(id, newName) {
+    const trimmed = newName ? newName.trim() : '';
+    if (!trimmed) return false;
+    const worker = this.workers.find(w => w.id === id);
+    if (worker) {
+      worker.name = trimmed;
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  deleteWorker(id) {
+    const index = this.workers.findIndex(w => w.id === id);
+    if (index !== -1) {
+      this.workers.splice(index, 1);
+      // Eliminar también de registros pasados
+      Object.keys(this.records).forEach(dateStr => {
+        this.records[dateStr] = (this.records[dateStr] || []).filter(wId => wId !== id);
+      });
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  getWorker(id) {
+    return this.workers.find(w => w.id === id) || null;
+  }
+
+  getActiveWorkers() {
+    return this.workers.filter(w => w.active);
+  }
+
+  // --- GESTIÓN DE ASISTENCIA DIARIA ---
+
+  isWorkerPresent(dateStr, workerId) {
+    const dayList = this.records[dateStr] || [];
+    return dayList.includes(workerId);
+  }
+
+  setAttendance(dateStr, workerId, isPresent = true) {
+    if (!this.records[dateStr]) {
+      this.records[dateStr] = [];
+    }
+    const list = this.records[dateStr];
+    const idx = list.indexOf(workerId);
+    if (isPresent && idx === -1) {
+      list.push(workerId);
+    } else if (!isPresent && idx !== -1) {
+      list.splice(idx, 1);
+    }
+    this.save();
+    return isPresent;
+  }
+
+  toggleAttendance(dateStr, workerId) {
+    if (!this.records[dateStr]) {
+      this.records[dateStr] = [];
+    }
+    const list = this.records[dateStr];
+    const idx = list.indexOf(workerId);
+    if (idx === -1) {
+      list.push(workerId);
+    } else {
+      list.splice(idx, 1);
+    }
+    this.save();
+    return idx === -1; // true si ahora está presente
+  }
+
+  markAll(dateStr, present = true) {
+    if (present) {
+      this.records[dateStr] = this.getActiveWorkers().map(w => w.id);
+    } else {
+      this.records[dateStr] = [];
+    }
+    this.save();
+  }
+
+  getDayCount(dateStr) {
+    return (this.records[dateStr] || []).length;
+  }
+
+  // --- ESTADÍSTICAS Y LISTA MENSUAL ORDENADA ---
+
+  /**
+   * Obtiene la clasificación mensual ordenada de mayor a menor número de días trabajados.
+   * @param {number} year - Ej: 2026
+   * @param {number} month - 1 a 12
+   */
+  getMonthlyRanking(year, month) {
+    const padMonth = String(month).padStart(2, '0');
+    const monthPrefix = `${year}-${padMonth}`;
+
+    // Obtener todas las fechas del mes registradas
+    const monthDates = Object.keys(this.records).filter(d => d.startsWith(monthPrefix) && (this.records[d] || []).length > 0);
+    const totalRecordedDays = monthDates.length;
+
+    // Calcular días trabajados por cada persona en el mes
+    const statsMap = {};
+    this.workers.forEach(w => {
+      statsMap[w.id] = {
+        id: w.id,
+        name: w.name,
+        daysWorked: 0,
+        dates: []
+      };
+    });
+
+    monthDates.forEach(dateStr => {
+      const attendees = this.records[dateStr] || [];
+      attendees.forEach(wId => {
+        if (statsMap[wId]) {
+          statsMap[wId].daysWorked++;
+          statsMap[wId].dates.push(dateStr);
+        }
+      });
+    });
+
+    // Convertir a lista y ordenar de mayor a menor días trabajados
+    const ranking = Object.values(statsMap).sort((a, b) => {
+      if (b.daysWorked !== a.daysWorked) {
+        return b.daysWorked - a.daysWorked;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    // Asignar rangos y porcentajes
+    const maxDays = ranking.length > 0 ? ranking[0].daysWorked : 0;
+    const minDays = ranking.length > 0 ? ranking[ranking.length - 1].daysWorked : 0;
+
+    ranking.forEach((item, index) => {
+      item.rank = index + 1;
+      item.percentage = totalRecordedDays > 0 ? Math.round((item.daysWorked / totalRecordedDays) * 100) : 0;
+      item.isLeader = item.daysWorked > 0 && item.daysWorked === maxDays;
+      item.isLast = ranking.length > 1 && item.daysWorked === minDays;
+    });
+
+    return {
+      year,
+      month,
+      monthName: this.getMonthName(month),
+      totalRecordedDays,
+      ranking,
+      mostWorked: ranking.filter(r => r.isLeader),
+      leastWorked: ranking.filter(r => r.isLast)
+    };
+  }
+
+  getMonthName(month) {
+    const names = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    return names[month - 1] || 'Mes';
+  }
+
+  // Genera texto limpio y formateado para compartir la lista mensual en WhatsApp
+  getShareableMonthlyText(year, month) {
+    const data = this.getMonthlyRanking(year, month);
+    let text = `📋 *CONTROL DE JORNADAS - ${data.monthName.toUpperCase()} ${year}*\n`;
+    text += `Total de días con trabajo: ${data.totalRecordedDays} días\n\n`;
+    text += `🏆 *LISTA DE DÍAS TRABAJADOS:*\n`;
+
+    if (data.ranking.length === 0 || data.totalRecordedDays === 0) {
+      text += `_No hay jornadas registradas en este mes._`;
+      return text;
+    }
+
+    data.ranking.forEach((r, i) => {
+      let medal = `${i + 1}. `;
+      if (i === 0 && r.daysWorked > 0) medal = `1. 🥇 `;
+      else if (i === 1 && r.daysWorked > 0) medal = `2. 🥈 `;
+      else if (i === 2 && r.daysWorked > 0) medal = `3. 🥉 `;
+
+      let extra = '';
+      if (r.isLeader && r.daysWorked > 0) extra = ' (El que más trabajó)';
+      else if (r.isLast && r.daysWorked < data.mostWorked[0].daysWorked) extra = ' (Menos días)';
+
+      text += `${medal}*${r.name}*: ${r.daysWorked} días${extra}\n`;
+    });
+
+    return text;
+  }
+}
+
+window.attendanceManager = new AttendanceManager();
+
+// Controlador Principal de la App de Control de Asistencia y Jornadas
+
+class SoundFX {
+  constructor() {
+    this.ctx = null;
+  }
+  init() {
+    if (!this.ctx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) this.ctx = new AudioContext();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  }
+  playBeep(freq = 600, duration = 0.08) {
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + duration);
+    } catch (e) {}
+  }
+  clickPresent() {
+    this.playBeep(700, 0.07);
+    if (navigator.vibrate) navigator.vibrate(20);
+  }
+  clickAbsent() {
+    this.playBeep(450, 0.07);
+    if (navigator.vibrate) navigator.vibrate(15);
+  }
+}
+
+const sounds = new SoundFX();
+
+// Estado de la interfaz
+let activeDate = new Date(); // Fecha actual seleccionada para pasar lista
+let statsYear = activeDate.getFullYear();
+let statsMonth = activeDate.getMonth() + 1; // 1 a 12
+let currentTab = 'attendance';
+
+document.addEventListener('DOMContentLoaded', () => {
+  initTabs();
+  initDateControls();
+  initStatsControls();
+  initWorkersControls();
+  initPWA();
+
+  // Render inicial
+  renderDateDisplay();
+  renderAttendance();
+  renderRanking();
+  renderWorkersDirectory();
+});
+
+// Pestañas de navegación
+function initTabs() {
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabId = tab.getAttribute('data-tab');
+      switchTab(tabId);
+    });
+  });
+}
+
+function switchTab(tabId) {
+  currentTab = tabId;
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    t.classList.toggle('active', t.getAttribute('data-tab') === tabId);
+  });
+  document.querySelectorAll('.tab-pane').forEach(p => {
+    p.classList.toggle('active', p.id === `pane-${tabId}`);
+  });
+
+  const titles = {
+    attendance: 'Control de Asistencia',
+    ranking: 'Lista y Cierre de Mes',
+    workers: 'Gestión de Personas'
+  };
+  document.getElementById('brand-title').textContent = titles[tabId] || 'Control de Asistencia';
+
+  if (tabId === 'ranking') renderRanking();
+  if (tabId === 'workers') renderWorkersDirectory();
+  if (tabId === 'attendance') renderAttendance();
+}
+
+// Formateo de fecha YYYY-MM-DD
+function getDateString(dateObj) {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const d = String(dateObj.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function initDateControls() {
+  const dateInput = document.getElementById('selected-date-input');
+
+  // Inicializar input de fecha con hoy
+  dateInput.value = getDateString(activeDate);
+
+  dateInput.addEventListener('change', (e) => {
+    if (e.target.value) {
+      const parts = e.target.value.split('-');
+      activeDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      renderDateDisplay();
+      renderAttendance();
+    }
+  });
+
+  document.getElementById('btn-prev-day').addEventListener('click', () => {
+    activeDate.setDate(activeDate.getDate() - 1);
+    dateInput.value = getDateString(activeDate);
+    renderDateDisplay();
+    renderAttendance();
+  });
+
+  document.getElementById('btn-next-day').addEventListener('click', () => {
+    activeDate.setDate(activeDate.getDate() + 1);
+    dateInput.value = getDateString(activeDate);
+    renderDateDisplay();
+    renderAttendance();
+  });
+
+  document.getElementById('btn-today').addEventListener('click', () => {
+    activeDate = new Date();
+    dateInput.value = getDateString(activeDate);
+    renderDateDisplay();
+    renderAttendance();
+  });
+
+  // Marcar todos / desmarcar todos
+  document.getElementById('btn-check-all').addEventListener('click', () => {
+    const dStr = getDateString(activeDate);
+    window.attendanceManager.markAll(dStr, true);
+    sounds.clickPresent();
+    renderAttendance();
+  });
+
+  document.getElementById('btn-uncheck-all').addEventListener('click', () => {
+    const dStr = getDateString(activeDate);
+    window.attendanceManager.markAll(dStr, false);
+    sounds.clickAbsent();
+    renderAttendance();
+  });
+}
+
+function renderDateDisplay() {
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  const str = activeDate.toLocaleDateString('es-ES', options);
+  document.getElementById('date-display-label').textContent = str;
+}
+
+// --- RENDERIZADO DE ASISTENCIA DIARIA ---
+
+function renderAttendance() {
+  const manager = window.attendanceManager;
+  const dStr = getDateString(activeDate);
+  const container = document.getElementById('attendance-list-container');
+  container.innerHTML = '';
+
+  const workers = manager.getActiveWorkers();
+  let presentCount = 0;
+
+  workers.forEach(worker => {
+    const isPresent = manager.isWorkerPresent(dStr, worker.id);
+    if (isPresent) presentCount++;
+
+    const card = document.createElement('div');
+    card.className = `worker-attendance-card ${isPresent ? 'present' : ''}`;
+    card.setAttribute('data-id', worker.id);
+
+    card.innerHTML = `
+      <div class="worker-info">
+        <div class="worker-avatar">${worker.name.charAt(0).toUpperCase()}</div>
+        <div class="worker-name-row">
+          <span class="worker-name-text">${worker.name}</span>
+          <button type="button" class="btn-rename" title="Editar nombre de ${worker.name}">✏️</button>
+        </div>
+      </div>
+      <div class="status-pill">
+        ${isPresent ? 'Trabajó ✅' : 'Descanso ⚪'}
+      </div>
+    `;
+
+    // Toque para marcar/desmarcar
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-rename')) return;
+      const nowPresent = manager.toggleAttendance(dStr, worker.id);
+      if (nowPresent) sounds.clickPresent();
+      else sounds.clickAbsent();
+      renderAttendance();
+    });
+
+    // Botón para renombrar persona al vuelo
+    const renameBtn = card.querySelector('.btn-rename');
+    renameBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const nuevo = prompt(`Cambiar nombre de "${worker.name}":`, worker.name);
+      if (nuevo && nuevo.trim() && nuevo.trim() !== worker.name) {
+        manager.editWorker(worker.id, nuevo);
+        renderAttendance();
+      }
+    });
+
+    container.appendChild(card);
+  });
+
+  // Actualizar contador del día
+  document.getElementById('attendees-counter').textContent = `${presentCount} de ${workers.length}`;
+}
+
+// --- ESTADÍSTICAS Y LISTA ORDENADA DE FIN DE MES ---
+
+function initStatsControls() {
+  document.getElementById('btn-prev-month').addEventListener('click', () => {
+    statsMonth--;
+    if (statsMonth < 1) {
+      statsMonth = 12;
+      statsYear--;
+    }
+    renderRanking();
+  });
+
+  document.getElementById('btn-next-month').addEventListener('click', () => {
+    statsMonth++;
+    if (statsMonth > 12) {
+      statsMonth = 1;
+      statsYear++;
+    }
+    renderRanking();
+  });
+
+  // Botón Copiar para WhatsApp
+  document.getElementById('btn-share-whatsapp').addEventListener('click', () => {
+    const text = window.attendanceManager.getShareableMonthlyText(statsYear, statsMonth);
+
+    // Si soporta Web Share API en móvil
+    if (navigator.share) {
+      navigator.share({
+        title: `Jornadas ${window.attendanceManager.getMonthName(statsMonth)} ${statsYear}`,
+        text: text
+      }).catch(() => copyToClipboard(text));
+    } else {
+      copyToClipboard(text);
+    }
+  });
+
+  // Cerrar modal de desglose
+  document.getElementById('btn-close-worker-modal').addEventListener('click', () => {
+    document.getElementById('modal-worker-dates').classList.remove('open');
+  });
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('¡Lista copiada! Ya puedes pegarla en WhatsApp');
+  }).catch(() => {
+    prompt('Copia este texto para WhatsApp:', text);
+  });
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast-msg');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+function renderRanking() {
+  const manager = window.attendanceManager;
+  const data = manager.getMonthlyRanking(statsYear, statsMonth);
+
+  // Cabecera del mes
+  document.getElementById('stats-month-title').textContent = `${data.monthName} ${data.year}`;
+  document.getElementById('stats-month-days').textContent = `Total de días con trabajo: ${data.totalRecordedDays}`;
+
+  // Tarjeta: El que más trabajó
+  const topNames = data.mostWorked.map(w => w.name).join(', ') || '-';
+  const topDays = data.mostWorked.length > 0 ? data.mostWorked[0].daysWorked : 0;
+  document.getElementById('highlight-top-name').textContent = topNames;
+  document.getElementById('highlight-top-days').textContent = `${topDays} días`;
+
+  // Tarjeta: El que menos trabajó
+  const bottomNames = (data.leastWorked.length > 0 && data.leastWorked[0].daysWorked < topDays)
+    ? data.leastWorked.map(w => w.name).join(', ')
+    : '-';
+  const bottomDays = (data.leastWorked.length > 0 && data.leastWorked[0].daysWorked < topDays)
+    ? data.leastWorked[0].daysWorked
+    : 0;
+  document.getElementById('highlight-bottom-name').textContent = bottomNames;
+  document.getElementById('highlight-bottom-days').textContent = `${bottomDays} días`;
+
+  // Lista oficial ordenada de fin de mes
+  const listContainer = document.getElementById('monthly-ranking-container');
+  listContainer.innerHTML = '';
+
+  if (data.ranking.length === 0 || data.totalRecordedDays === 0) {
+    listContainer.innerHTML = '<div style="text-align:center; color: var(--text-dim); padding: 18px; font-size: 0.9rem;">No hay jornadas registradas en este mes.</div>';
+    return;
+  }
+
+  data.ranking.forEach((item, index) => {
+    const row = document.createElement('div');
+    row.className = 'ranking-item';
+
+    let rankIcon = `${item.rank}º`;
+    if (index === 0 && item.daysWorked > 0) rankIcon = '🥇';
+    else if (index === 1 && item.daysWorked > 0) rankIcon = '🥈';
+    else if (index === 2 && item.daysWorked > 0) rankIcon = '🥉';
+
+    row.innerHTML = `
+      <div class="ranking-item-top-row">
+        <span class="rank-badge ${index < 3 ? 'rank-' + (index + 1) : ''}">${rankIcon}</span>
+        <span class="ranking-worker-name">${item.name}</span>
+        <div class="ranking-days-count">
+          ${item.daysWorked} <span>días</span>
+        </div>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" style="width: ${item.percentage}%;"></div>
+      </div>
+    `;
+
+    // Al tocar una persona, ver desglose de fechas trabajadas
+    row.addEventListener('click', () => {
+      openWorkerDatesModal(item.name, item.dates, data.monthName, data.year);
+    });
+
+    listContainer.appendChild(row);
+  });
+}
+
+function openWorkerDatesModal(workerName, dates, monthName, year) {
+  document.getElementById('modal-worker-name').textContent = `${workerName} (${dates.length} días en ${monthName} ${year})`;
+  const chipsContainer = document.getElementById('worker-dates-chips');
+  chipsContainer.innerHTML = '';
+
+  if (dates.length === 0) {
+    chipsContainer.innerHTML = '<div style="color: var(--text-dim); font-size: 0.85rem;">No trabajó ningún día en este mes.</div>';
+  } else {
+    // Ordenar fechas cronológicamente
+    dates.sort().forEach(dStr => {
+      const parts = dStr.split('-');
+      const dayNum = parseInt(parts[2], 10);
+      const chip = document.createElement('div');
+      chip.className = 'date-chip';
+      chip.textContent = `Día ${dayNum} (${dStr})`;
+      chipsContainer.appendChild(chip);
+    });
+  }
+
+  document.getElementById('modal-worker-dates').classList.add('open');
+}
+
+// --- GESTIÓN DE TRABAJADORES ---
+
+function initWorkersControls() {
+  const addForm = document.getElementById('add-worker-form');
+  const addInput = document.getElementById('new-worker-name-input');
+
+  addForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = addInput.value.trim();
+    if (name) {
+      window.attendanceManager.addWorker(name);
+      addInput.value = '';
+      showToast(`Persona añadida: "${name}"`);
+      renderWorkersDirectory();
+      renderAttendance();
+    }
+  });
+}
+
+function renderWorkersDirectory() {
+  const manager = window.attendanceManager;
+  const list = document.getElementById('workers-directory-container');
+  list.innerHTML = '';
+
+  const workers = manager.workers;
+
+  if (workers.length === 0) {
+    list.innerHTML = '<div style="text-align:center; color: var(--text-dim); padding: 14px;">No hay personas registradas. Añade una arriba.</div>';
+    return;
+  }
+
+  workers.forEach(w => {
+    const item = document.createElement('div');
+    item.className = 'worker-directory-item';
+    item.innerHTML = `
+      <span class="worker-dir-name">${w.name}</span>
+      <div class="worker-dir-actions">
+        <button type="button" class="icon-btn-action edit" title="Editar nombre">✏️</button>
+        <button type="button" class="icon-btn-action delete" title="Eliminar">🗑️</button>
+      </div>
+    `;
+
+    item.querySelector('.edit').addEventListener('click', () => {
+      const nuevo = prompt(`Editar nombre de "${w.name}":`, w.name);
+      if (nuevo && nuevo.trim() && nuevo.trim() !== w.name) {
+        manager.editWorker(w.id, nuevo);
+        renderWorkersDirectory();
+        renderAttendance();
+        renderRanking();
+      }
+    });
+
+    item.querySelector('.delete').addEventListener('click', () => {
+      if (confirm(`¿Estás seguro de eliminar a "${w.name}"? Se borrarán también sus registros pasados.`)) {
+        manager.deleteWorker(w.id);
+        renderWorkersDirectory();
+        renderAttendance();
+        renderRanking();
+      }
+    });
+
+    list.appendChild(item);
+  });
+}
+
+// --- PWA SERVICE WORKER Y ANCHO DE PANTALLA ---
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'flex';
+});
+
+function initPWA() {
+  const installBtn = document.getElementById('btn-pwa-install');
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          const banner = document.getElementById('pwa-install-banner');
+          if (banner) banner.style.display = 'none';
+        }
+        deferredPrompt = null;
+      }
+    });
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('SW de Asistencia registrado', reg.scope))
+        .catch(err => console.warn('SW no disponible en local', err));
+    });
+  }
+}
+
+</script>
+</body>
+</html>

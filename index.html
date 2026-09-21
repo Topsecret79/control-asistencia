@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f19">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Asistencia">
+  <meta name="description" content="Control diario de asistencia, jornadas laborales y ranking mensual de trabajadores">
+  
+  <title>Control de Asistencia y Jornadas</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Encabezado Fijo -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">📋</span>
+      <span class="brand-title" id="brand-title">Control de Asistencia</span>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="main-container">
+    
+    <!-- Banner de Instalación PWA (oculto por defecto) -->
+    <div id="pwa-install-banner" class="install-banner" style="display: none;">
+      <div class="install-banner-text">
+        <strong>Instalar Aplicación</strong>
+        <span>Úsala sin conexión en tu móvil</span>
+      </div>
+      <button type="button" id="btn-pwa-install">Instalar</button>
+    </div>
+
+    <!-- PESTAÑA 1: ASISTENCIA DIARIA -->
+    <section id="pane-attendance" class="tab-pane active">
+      <!-- Selector de Fecha -->
+      <div class="date-selector-card">
+        <div class="date-nav-row">
+          <button type="button" class="date-nav-btn" id="btn-prev-day">◀ Anterior</button>
+          <input type="date" id="selected-date-input" class="current-date-input">
+          <button type="button" class="date-nav-btn" id="btn-next-day">Siguiente ▶</button>
+        </div>
+        <div style="display: flex; justify-content: center; margin-top: 8px;">
+          <button type="button" class="quick-btn" id="btn-today" style="font-size: 0.8rem; padding: 4px 14px;">Hoy</button>
+        </div>
+        <div class="date-display-label" id="date-display-label">Cargando fecha...</div>
+      </div>
+
+      <!-- Barra de resumen y botones rápidos -->
+      <div class="day-actions-row">
+        <div class="attendees-counter-badge">
+          Trabajaron: <strong id="attendees-counter">0 de 0</strong>
+        </div>
+        <div class="quick-check-btns">
+          <button type="button" class="quick-btn" id="btn-check-all" title="Marcar a todos">✅ Todos</button>
+          <button type="button" class="quick-btn" id="btn-uncheck-all" title="Desmarcar todos">⚪ Ninguno</button>
+        </div>
+      </div>
+
+      <!-- Lista de trabajadores para marcar -->
+      <div id="attendance-list-container" class="attendance-list">
+        <!-- Renderizado dinámico desde app.js -->
+      </div>
+    </section>
+
+    <!-- PESTAÑA 2: LISTA ORDENADA Y FIN DE MES -->
+    <section id="pane-ranking" class="tab-pane">
+      <!-- Selector de Mes -->
+      <div class="stats-header-card">
+        <div class="month-picker-row">
+          <button type="button" class="date-nav-btn" id="btn-prev-month">◀</button>
+          <div>
+            <div class="month-title" id="stats-month-title">-</div>
+            <div class="month-days-count" id="stats-month-days">Total de días con trabajo: 0</div>
+          </div>
+          <button type="button" class="date-nav-btn" id="btn-next-month">▶</button>
+        </div>
+      </div>
+
+      <!-- Destacados: Quién trabajó más y quién menos -->
+      <div class="highlights-grid">
+        <div class="highlight-card top">
+          <span class="highlight-label">🏆 Más Trabajó</span>
+          <span class="highlight-name" id="highlight-top-name">-</span>
+          <span class="highlight-days" id="highlight-top-days">0 días</span>
+        </div>
+        <div class="highlight-card bottom">
+          <span class="highlight-label">💤 Menos Trabajó</span>
+          <span class="highlight-name" id="highlight-bottom-name">-</span>
+          <span class="highlight-days" id="highlight-bottom-days">0 días</span>
+        </div>
+      </div>
+
+      <!-- Lista Oficial Ordenada de Mayor a Menor -->
+      <div class="monthly-ranking-card">
+        <div class="section-header-row">
+          <div class="section-title">
+            <span>📊</span>
+            <span>Clasificación del Mes</span>
+          </div>
+          <span style="font-size: 0.75rem; color: var(--text-dim);">(De más a menos)</span>
+        </div>
+
+        <div id="monthly-ranking-container" class="ranking-list">
+          <!-- Renderizado dinámico -->
+        </div>
+
+        <!-- Botón para compartir lista en WhatsApp -->
+        <button type="button" id="btn-share-whatsapp" class="share-whatsapp-btn">
+          <span>📲</span>
+          <span>Compartir Lista Oficial por WhatsApp</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 3: GESTIÓN DE PERSONAS -->
+    <section id="pane-workers" class="tab-pane">
+      <div class="manage-workers-card">
+        <div class="section-title" style="margin-bottom: 12px;">
+          <span>👥</span>
+          <span>Añadir o Editar Personas</span>
+        </div>
+        
+        <form id="add-worker-form" class="add-worker-form">
+          <input type="text" id="new-worker-name-input" class="form-input" placeholder="Nombre de la persona..." required autocomplete="off">
+          <button type="submit" class="btn-add-action">+ Añadir</button>
+        </form>
+
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 14px;">
+          💡 Puedes tocar el icono de lápiz (✏️) en cualquier momento para cambiar un nombre sin perder sus días trabajados.
+        </p>
+
+        <div class="section-title" style="font-size: 0.95rem; margin-bottom: 10px; color: var(--text-muted);">
+          Personas Registradas
+        </div>
+
+        <div id="workers-directory-container" class="workers-directory-list">
+          <!-- Renderizado dinámico -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal Detalle de Días Trabajados por Persona -->
+  <div id="modal-worker-dates" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-worker-name">Días trabajados</div>
+        <button type="button" id="btn-close-worker-modal" class="quick-btn" style="padding: 4px 8px;">✕</button>
+      </div>
+      <p style="font-size: 0.8rem; color: var(--text-muted);">Días en los que se registró asistencia en este mes:</p>
+      <div id="worker-dates-chips" class="worked-dates-chips">
+        <!-- Chips de fechas -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Flotante -->
+  <div id="toast-msg" class="toast-msg">Mensaje copiado</div>
+
+  <!-- Barra de Navegación Inferior -->
+  <nav class="bottom-nav">
+    <button type="button" class="nav-tab active" data-tab="attendance">
+      <span class="tab-icon">📅</span>
+      <span class="tab-label">Asistencia</span>
+    </button>
+    <button type="button" class="nav-tab" data-tab="ranking">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">Fin de Mes</span>
+    </button>
+    <button type="button" class="nav-tab" data-tab="workers">
+      <span class="tab-icon">👥</span>
+      <span class="tab-label">Personas</span>
+    </button>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="js/attendance.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
