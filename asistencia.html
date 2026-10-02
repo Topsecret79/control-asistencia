@@ -332,11 +332,68 @@ body {
   border-radius: var(--radius-lg);
   padding: 14px 16px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 10px;
   cursor: pointer;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-sm);
+}
+
+.worker-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.worker-billing-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  width: 100%;
+}
+
+.billing-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.billing-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.billing-input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  width: 90px;
+  text-align: right;
+  outline: none;
+}
+
+.billing-input:focus {
+  border-color: var(--primary);
+  background: #0f172a;
+}
+
+.billing-currency {
+  font-weight: 800;
+  color: var(--gold);
+  font-size: 0.9rem;
 }
 
 .worker-attendance-card:active {
@@ -348,6 +405,11 @@ body {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(6, 78, 59, 0.25));
   border-color: var(--success);
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.2);
+}
+
+.worker-attendance-card.present .worker-billing-row {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(6, 78, 59, 0.35);
 }
 
 .worker-info {
@@ -578,8 +640,15 @@ body {
   margin-left: 6px;
 }
 
+.ranking-stats-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
 .ranking-days-count {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 900;
   color: var(--success);
 }
@@ -589,6 +658,12 @@ body {
   font-weight: 600;
   color: var(--text-muted);
   margin-left: 3px;
+}
+
+.ranking-billing-count {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--gold);
 }
 
 .progress-bar-bg {
@@ -856,6 +931,8 @@ body {
       <div class="day-actions-row">
         <div class="attendees-counter-badge">
           Trabajaron: <strong id="attendees-counter">0 de 0</strong>
+          <span style="margin: 0 4px; color: var(--border-color);">•</span>
+          Hoy: <strong id="daily-total-billing" style="color: var(--gold);">0 €</strong>
         </div>
         <div class="quick-check-btns">
           <button type="button" class="quick-btn" id="btn-check-all" title="Marcar a todos">✅ Todos</button>
@@ -878,6 +955,7 @@ body {
           <div>
             <div class="month-title" id="stats-month-title">-</div>
             <div class="month-days-count" id="stats-month-days">Total de días con trabajo: 0</div>
+            <div style="font-size: 0.85rem; font-weight: 800; color: var(--gold); text-align: center; margin-top: 3px;" id="stats-month-billing">Facturación total: 0 €</div>
           </div>
           <button type="button" class="date-nav-btn" id="btn-next-month">▶</button>
         </div>
@@ -1024,6 +1102,9 @@ class AttendanceManager {
     // Registros por fecha: { "YYYY-MM-DD": [workerId1, workerId2, ...] }
     this.records = {};
 
+    // Facturación por fecha y ruta: { "YYYY-MM-DD": { [workerId]: number } }
+    this.billingRecords = {};
+
     this.load();
   }
 
@@ -1031,7 +1112,8 @@ class AttendanceManager {
     try {
       safeStorage.setItem(this.storageKey, JSON.stringify({
         workers: this.workers,
-        records: this.records
+        records: this.records,
+        billingRecords: this.billingRecords
       }));
     } catch (e) {
       console.warn('Error al guardar datos de asistencia', e);
@@ -1049,20 +1131,30 @@ class AttendanceManager {
         if (parsed.records && typeof parsed.records === 'object') {
           this.records = parsed.records;
         }
+        if (parsed.billingRecords && typeof parsed.billingRecords === 'object') {
+          this.billingRecords = parsed.billingRecords;
+        }
       }
+      // Garantizar que cada ruta/trabajador tenga defaultBilling numérico
+      this.workers.forEach(w => {
+        if (typeof w.defaultBilling !== 'number') {
+          w.defaultBilling = 0;
+        }
+      });
     } catch (e) {
       console.warn('Error al cargar datos de asistencia', e);
     }
   }
 
-  // --- GESTIÓN DE TRABAJADORES ---
+  // --- GESTIÓN DE TRABAJADORES Y RUTAS ---
 
-  addWorker(name) {
+  addWorker(name, defaultBilling = 0) {
     const trimmed = name ? name.trim() : '';
     if (!trimmed) return null;
     const newWorker = {
       id: Date.now(),
       name: trimmed,
+      defaultBilling: parseFloat(defaultBilling) || 0,
       active: true
     };
     this.workers.push(newWorker);
@@ -1090,6 +1182,11 @@ class AttendanceManager {
       Object.keys(this.records).forEach(dateStr => {
         this.records[dateStr] = (this.records[dateStr] || []).filter(wId => wId !== id);
       });
+      Object.keys(this.billingRecords).forEach(dateStr => {
+        if (this.billingRecords[dateStr]) {
+          delete this.billingRecords[dateStr][id];
+        }
+      });
       this.save();
       return true;
     }
@@ -1102,6 +1199,38 @@ class AttendanceManager {
 
   getActiveWorkers() {
     return this.workers.filter(w => w.active);
+  }
+
+  // --- FACTURACIÓN POR RUTA Y DÍA ---
+
+  setDailyBilling(dateStr, workerId, amount) {
+    const val = parseFloat(amount);
+    const num = isNaN(val) ? 0 : Math.max(0, val);
+    if (!this.billingRecords[dateStr]) {
+      this.billingRecords[dateStr] = {};
+    }
+    this.billingRecords[dateStr][workerId] = num;
+    const worker = this.getWorker(workerId);
+    if (worker) {
+      worker.defaultBilling = num;
+    }
+    this.save();
+    return num;
+  }
+
+  getDailyBilling(dateStr, workerId) {
+    if (this.billingRecords[dateStr] && typeof this.billingRecords[dateStr][workerId] === 'number') {
+      return this.billingRecords[dateStr][workerId];
+    }
+    const worker = this.getWorker(workerId);
+    return (worker && typeof worker.defaultBilling === 'number') ? worker.defaultBilling : 0;
+  }
+
+  getDailyTotalBilling(dateStr) {
+    const attendees = this.records[dateStr] || [];
+    return attendees.reduce((sum, wId) => {
+      return sum + this.getDailyBilling(dateStr, wId);
+    }, 0);
   }
 
   // --- GESTIÓN DE ASISTENCIA DIARIA ---
@@ -1157,7 +1286,8 @@ class AttendanceManager {
   // --- ESTADÍSTICAS Y LISTA MENSUAL ORDENADA ---
 
   /**
-   * Obtiene la clasificación mensual ordenada de mayor a menor número de días trabajados.
+   * Obtiene la clasificación mensual ordenada de mayor a menor número de días trabajados
+   * e incluye el total facturado por cada ruta/persona y el total global del mes.
    * @param {number} year - Ej: 2026
    * @param {number} month - 1 a 12
    */
@@ -1169,14 +1299,15 @@ class AttendanceManager {
     const monthDates = Object.keys(this.records).filter(d => d.startsWith(monthPrefix) && (this.records[d] || []).length > 0);
     const totalRecordedDays = monthDates.length;
 
-    // Calcular días trabajados por cada persona en el mes
+    // Calcular días trabajados y facturación de cada ruta en el mes
     const statsMap = {};
     this.workers.forEach(w => {
       statsMap[w.id] = {
         id: w.id,
         name: w.name,
         daysWorked: 0,
-        dates: []
+        totalBilled: 0,
+        dates: [] // [{ date: string, billing: number }]
       };
     });
 
@@ -1184,25 +1315,32 @@ class AttendanceManager {
       const attendees = this.records[dateStr] || [];
       attendees.forEach(wId => {
         if (statsMap[wId]) {
+          const billing = this.getDailyBilling(dateStr, wId);
           statsMap[wId].daysWorked++;
-          statsMap[wId].dates.push(dateStr);
+          statsMap[wId].totalBilled += billing;
+          statsMap[wId].dates.push({ date: dateStr, billing });
         }
       });
     });
 
-    // Convertir a lista y ordenar de mayor a menor días trabajados
+    // Convertir a lista y ordenar de mayor a menor días trabajados (si empatan, por facturación)
     const ranking = Object.values(statsMap).sort((a, b) => {
       if (b.daysWorked !== a.daysWorked) {
         return b.daysWorked - a.daysWorked;
       }
+      if (b.totalBilled !== a.totalBilled) {
+        return b.totalBilled - a.totalBilled;
+      }
       return a.name.localeCompare(b.name);
     });
 
-    // Asignar rangos y porcentajes
+    // Asignar rangos, porcentajes y calcular facturación total global
     const maxDays = ranking.length > 0 ? ranking[0].daysWorked : 0;
     const minDays = ranking.length > 0 ? ranking[ranking.length - 1].daysWorked : 0;
+    let monthGrandTotalBilled = 0;
 
     ranking.forEach((item, index) => {
+      monthGrandTotalBilled += item.totalBilled;
       item.rank = index + 1;
       item.percentage = totalRecordedDays > 0 ? Math.round((item.daysWorked / totalRecordedDays) * 100) : 0;
       item.isLeader = item.daysWorked > 0 && item.daysWorked === maxDays;
@@ -1214,6 +1352,7 @@ class AttendanceManager {
       month,
       monthName: this.getMonthName(month),
       totalRecordedDays,
+      monthGrandTotalBilled,
       ranking,
       mostWorked: ranking.filter(r => r.isLeader),
       leastWorked: ranking.filter(r => r.isLast)
@@ -1231,9 +1370,10 @@ class AttendanceManager {
   // Genera texto limpio y formateado para compartir la lista mensual en WhatsApp
   getShareableMonthlyText(year, month) {
     const data = this.getMonthlyRanking(year, month);
-    let text = `📋 *CONTROL DE JORNADAS - ${data.monthName.toUpperCase()} ${year}*\n`;
-    text += `Total de días con trabajo: ${data.totalRecordedDays} días\n\n`;
-    text += `🏆 *LISTA DE DÍAS TRABAJADOS:*\n`;
+    let text = `📋 *CONTROL DE JORNADAS Y FACTURACIÓN - ${data.monthName.toUpperCase()} ${year}*\n`;
+    text += `Total de días con trabajo: ${data.totalRecordedDays} días\n`;
+    text += `💰 *Facturación Total del Mes:* ${data.monthGrandTotalBilled.toLocaleString('es-ES')} €\n\n`;
+    text += `🏆 *LISTA OFICIAL (DÍAS Y FACTURACIÓN):*\n`;
 
     if (data.ranking.length === 0 || data.totalRecordedDays === 0) {
       text += `_No hay jornadas registradas en este mes._`;
@@ -1250,7 +1390,7 @@ class AttendanceManager {
       if (r.isLeader && r.daysWorked > 0) extra = ' (El que más trabajó)';
       else if (r.isLast && r.daysWorked < data.mostWorked[0].daysWorked) extra = ' (Menos días)';
 
-      text += `${medal}*${r.name}*: ${r.daysWorked} días${extra}\n`;
+      text += `${medal}*${r.name}*: ${r.daysWorked} días • *${r.totalBilled.toLocaleString('es-ES')} €*${extra}\n`;
     });
 
     return text;
@@ -1430,31 +1570,55 @@ function renderAttendance() {
   workers.forEach(worker => {
     const isPresent = manager.isWorkerPresent(dStr, worker.id);
     if (isPresent) presentCount++;
+    const billingValue = manager.getDailyBilling(dStr, worker.id);
 
     const card = document.createElement('div');
     card.className = `worker-attendance-card ${isPresent ? 'present' : ''}`;
     card.setAttribute('data-id', worker.id);
 
     card.innerHTML = `
-      <div class="worker-info">
-        <div class="worker-avatar">${worker.name.charAt(0).toUpperCase()}</div>
-        <div class="worker-name-row">
-          <span class="worker-name-text">${worker.name}</span>
-          <button type="button" class="btn-rename" title="Editar nombre de ${worker.name}">✏️</button>
+      <div class="worker-top-row">
+        <div class="worker-info">
+          <div class="worker-avatar">${worker.name.charAt(0).toUpperCase()}</div>
+          <div class="worker-name-row">
+            <span class="worker-name-text">${worker.name}</span>
+            <button type="button" class="btn-rename" title="Editar nombre de ${worker.name}">✏️</button>
+          </div>
+        </div>
+        <div class="status-pill">
+          ${isPresent ? 'Trabajó ✅' : 'Descanso ⚪'}
         </div>
       </div>
-      <div class="status-pill">
-        ${isPresent ? 'Trabajó ✅' : 'Descanso ⚪'}
+      <div class="worker-billing-row">
+        <span class="billing-label">💰 Facturación hoy:</span>
+        <div class="billing-input-group">
+          <input type="number" class="billing-input" value="${billingValue}" min="0" step="any" placeholder="0">
+          <span class="billing-currency">€</span>
+        </div>
       </div>
     `;
 
     // Toque para marcar/desmarcar
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.btn-rename')) return;
+      if (e.target.closest('.btn-rename') || e.target.closest('.worker-billing-row')) return;
       const nowPresent = manager.toggleAttendance(dStr, worker.id);
       if (nowPresent) sounds.clickPresent();
       else sounds.clickAbsent();
       renderAttendance();
+    });
+
+    // Manejo de la casilla editable de facturación
+    const billingInput = card.querySelector('.billing-input');
+    billingInput.addEventListener('click', (e) => e.stopPropagation());
+    billingInput.addEventListener('change', (e) => {
+      e.stopPropagation();
+      manager.setDailyBilling(dStr, worker.id, e.target.value);
+      updateDailyTotalBilling(dStr);
+    });
+    billingInput.addEventListener('input', (e) => {
+      e.stopPropagation();
+      manager.setDailyBilling(dStr, worker.id, e.target.value);
+      updateDailyTotalBilling(dStr);
     });
 
     // Botón para renombrar persona al vuelo
@@ -1471,8 +1635,18 @@ function renderAttendance() {
     container.appendChild(card);
   });
 
-  // Actualizar contador del día
+  // Actualizar contador del día y total facturado hoy
   document.getElementById('attendees-counter').textContent = `${presentCount} de ${workers.length}`;
+  updateDailyTotalBilling(dStr);
+}
+
+function updateDailyTotalBilling(dStr) {
+  const manager = window.attendanceManager;
+  const total = manager.getDailyTotalBilling(dStr);
+  const el = document.getElementById('daily-total-billing');
+  if (el) {
+    el.textContent = `${total.toLocaleString('es-ES')} €`;
+  }
 }
 
 // --- ESTADÍSTICAS Y LISTA ORDENADA DE FIN DE MES ---
@@ -1539,12 +1713,17 @@ function renderRanking() {
   // Cabecera del mes
   document.getElementById('stats-month-title').textContent = `${data.monthName} ${data.year}`;
   document.getElementById('stats-month-days').textContent = `Total de días con trabajo: ${data.totalRecordedDays}`;
+  const monthBillingEl = document.getElementById('stats-month-billing');
+  if (monthBillingEl) {
+    monthBillingEl.textContent = `Facturación total: ${data.monthGrandTotalBilled.toLocaleString('es-ES')} €`;
+  }
 
   // Tarjeta: El que más trabajó
   const topNames = data.mostWorked.map(w => w.name).join(', ') || '-';
   const topDays = data.mostWorked.length > 0 ? data.mostWorked[0].daysWorked : 0;
+  const topBilled = data.mostWorked.length > 0 ? data.mostWorked[0].totalBilled : 0;
   document.getElementById('highlight-top-name').textContent = topNames;
-  document.getElementById('highlight-top-days').textContent = `${topDays} días`;
+  document.getElementById('highlight-top-days').textContent = `${topDays} días (${topBilled.toLocaleString('es-ES')} €)`;
 
   // Tarjeta: El que menos trabajó
   const bottomNames = (data.leastWorked.length > 0 && data.leastWorked[0].daysWorked < topDays)
@@ -1553,8 +1732,11 @@ function renderRanking() {
   const bottomDays = (data.leastWorked.length > 0 && data.leastWorked[0].daysWorked < topDays)
     ? data.leastWorked[0].daysWorked
     : 0;
+  const bottomBilled = (data.leastWorked.length > 0 && data.leastWorked[0].daysWorked < topDays)
+    ? data.leastWorked[0].totalBilled
+    : 0;
   document.getElementById('highlight-bottom-name').textContent = bottomNames;
-  document.getElementById('highlight-bottom-days').textContent = `${bottomDays} días`;
+  document.getElementById('highlight-bottom-days').textContent = `${bottomDays} días (${bottomBilled.toLocaleString('es-ES')} €)`;
 
   // Lista oficial ordenada de fin de mes
   const listContainer = document.getElementById('monthly-ranking-container');
@@ -1578,8 +1760,9 @@ function renderRanking() {
       <div class="ranking-item-top-row">
         <span class="rank-badge ${index < 3 ? 'rank-' + (index + 1) : ''}">${rankIcon}</span>
         <span class="ranking-worker-name">${item.name}</span>
-        <div class="ranking-days-count">
-          ${item.daysWorked} <span>días</span>
+        <div class="ranking-stats-group">
+          <div class="ranking-days-count">${item.daysWorked} <span>días</span></div>
+          <div class="ranking-billing-count">${item.totalBilled.toLocaleString('es-ES')} €</div>
         </div>
       </div>
       <div class="progress-bar-bg">
@@ -1587,17 +1770,17 @@ function renderRanking() {
       </div>
     `;
 
-    // Al tocar una persona, ver desglose de fechas trabajadas
+    // Al tocar una persona, ver desglose de fechas y facturación diaria
     row.addEventListener('click', () => {
-      openWorkerDatesModal(item.name, item.dates, data.monthName, data.year);
+      openWorkerDatesModal(item.name, item.dates, item.totalBilled, data.monthName, data.year);
     });
 
     listContainer.appendChild(row);
   });
 }
 
-function openWorkerDatesModal(workerName, dates, monthName, year) {
-  document.getElementById('modal-worker-name').textContent = `${workerName} (${dates.length} días en ${monthName} ${year})`;
+function openWorkerDatesModal(workerName, dates, totalBilled, monthName, year) {
+  document.getElementById('modal-worker-name').textContent = `${workerName} (${dates.length} días • ${totalBilled.toLocaleString('es-ES')} € en ${monthName} ${year})`;
   const chipsContainer = document.getElementById('worker-dates-chips');
   chipsContainer.innerHTML = '';
 
@@ -1605,12 +1788,12 @@ function openWorkerDatesModal(workerName, dates, monthName, year) {
     chipsContainer.innerHTML = '<div style="color: var(--text-dim); font-size: 0.85rem;">No trabajó ningún día en este mes.</div>';
   } else {
     // Ordenar fechas cronológicamente
-    dates.sort().forEach(dStr => {
-      const parts = dStr.split('-');
+    dates.sort((a, b) => a.date.localeCompare(b.date)).forEach(item => {
+      const parts = item.date.split('-');
       const dayNum = parseInt(parts[2], 10);
       const chip = document.createElement('div');
       chip.className = 'date-chip';
-      chip.textContent = `Día ${dayNum} (${dStr})`;
+      chip.innerHTML = `<span>Día ${dayNum} (${item.date}):</span> <strong style="color: var(--gold);">${item.billing.toLocaleString('es-ES')} €</strong>`;
       chipsContainer.appendChild(chip);
     });
   }
